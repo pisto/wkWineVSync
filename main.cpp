@@ -41,7 +41,7 @@ HRESULT WINAPI myWaitForVerticalBlank(LPDIRECTDRAW* a, DWORD b, HANDLE c){
 	if(!m_glXGetVideoSyncSGI(&counter)) m_glXWaitVideoSyncSGI(2, (counter+1)%2, &counter);
 	else{
 		cleanup();
-		cerr<<"glXGetVideoSyncSGI, I suicide.\n";
+		cerr<<"glXGetVideoSyncSGI failed, I suicide.\n";
 	}
 	return DD_OK;
 }
