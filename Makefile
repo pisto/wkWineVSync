@@ -9,12 +9,12 @@ EXES                  =
 ### Common settings
 
 CEXTRA                = -m32
-CXXEXTRA              = -m32 -std=c++11
+CXXEXTRA              = -m32 -std=c++11 -O3
 RCEXTRA               =
 DEFINES               =
 INCLUDE_PATH          =
 DLL_PATH              =
-DLL_IMPORTS           =
+DLL_IMPORTS           = ddraw
 LIBRARY_PATH          =
 LIBRARIES             =
 
@@ -31,7 +31,7 @@ wkwinevsync_dll_ARFLAGS=
 wkwinevsync_dll_DLL_PATH=
 wkwinevsync_dll_DLLS  =
 wkwinevsync_dll_LIBRARY_PATH=
-wkwinevsync_dll_LIBRARIES=
+wkwinevsync_dll_LIBRARIES= dxguid GL
 
 wkwinevsync_dll_OBJS  = $(wkwinevsync_dll_C_SRCS:.c=.o) \
 			$(wkwinevsync_dll_CXX_SRCS:.cpp=.o) \
