@@ -25,8 +25,7 @@ wkwinevsync_dll_MODULE= wkWineVSync.dll
 wkwinevsync_dll_C_SRCS=
 wkwinevsync_dll_CXX_SRCS= main.cpp
 wkwinevsync_dll_RC_SRCS=
-wkwinevsync_dll_LDFLAGS= -shared \
-			-m32
+wkwinevsync_dll_LDFLAGS= -s -shared -m32
 wkwinevsync_dll_ARFLAGS=
 wkwinevsync_dll_DLL_PATH=
 wkwinevsync_dll_DLLS  =
