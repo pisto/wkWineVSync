@@ -74,8 +74,7 @@ HRESULT WINAPI myDirectDrawCreate(GUID* lpGUID, LPDIRECTDRAW* lplpDD, IUnknown* 
 }
 
 extern "C" BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved){
-	switch(reason){
-	case DLL_PROCESS_ATTACH: try{
+	if(reason == DLL_PROCESS_ATTACH) try{
 		if(!(madCHook = LoadLibrary("madCHook.dll"))) throw "Cannot load madCHook.dll";
 #define get(fn) if(!(fn = decltype(fn)(GetProcAddress(madCHook, #fn)))) throw "Cannot find " #fn
 		get(HookAPI);
@@ -88,13 +87,10 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved
 		get(glXGetVideoSyncSGI);
 		get(glXWaitVideoSyncSGI);
 #undef get
-		break;
 	} catch(const char* msg){
 		cleanup();
 		MessageBox(NULL, msg, "wkWineVSync fatal error", MB_ICONERROR);
 		return FALSE;
-	}
-	case DLL_PROCESS_DETACH: cleanup();
 	}
 	return TRUE;
 }
