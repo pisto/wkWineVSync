@@ -12,15 +12,16 @@ BOOL WINAPI (*UnhookCode)(PVOID*);
 #define vtb(thing, indx) ((*(void***)(thing))[indx])
 
 decltype(DirectDrawCreate)* nextDirectDrawCreate;
-HRESULT WINAPI (*nextWaitForVerticalBlank)(LPDIRECTDRAW*, DWORD, HANDLE);
+HRESULT WINAPI (*nextCreateSurface)(LPDIRECTDRAW* a, DDSURFACEDESC2* b, LPDIRECTDRAW* c, IUnknown* UnkOuter);
+HRESULT WINAPI (*nextFlip)(LPDIRECTDRAW* a, LPDIRECTDRAWSURFACE* b, DWORD c);
 
 PFNGLXGETVIDEOSYNCSGIPROC m_glXGetVideoSyncSGI;
 PFNGLXWAITVIDEOSYNCSGIPROC m_glXWaitVideoSyncSGI;
 
 void cleanup(){
-	if(nextWaitForVerticalBlank){
-		UnhookCode((PVOID*)&nextWaitForVerticalBlank);
-		nextWaitForVerticalBlank = 0;
+	if(nextFlip){
+		UnhookCode((PVOID*)&nextFlip);
+		nextFlip = 0;
 	}
 	if(nextDirectDrawCreate){
 		UnhookAPI((PVOID*)&nextDirectDrawCreate);
@@ -36,32 +37,38 @@ void cleanup(){
 	}
 }
 
-HRESULT WINAPI myWaitForVerticalBlank(LPDIRECTDRAW* a, DWORD b, HANDLE c){
+HRESULT WINAPI myFlip(LPDIRECTDRAW* a, LPDIRECTDRAWSURFACE* b, DWORD c){
 	uint counter;
 	if(!m_glXGetVideoSyncSGI(&counter)) m_glXWaitVideoSyncSGI(2, (counter+1)%2, &counter);
 	else{
 		cleanup();
 		cerr<<"glXGetVideoSyncSGI failed, I suicide.\n";
 	}
-	return DD_OK;
+	return nextFlip(a, b, c);
+}
+
+HRESULT WINAPI myCreateSurface(LPDIRECTDRAW* a, DDSURFACEDESC2* b, LPDIRECTDRAW* lplpDDSurface, IUnknown* d){
+	auto ret = nextCreateSurface(a, b, lplpDDSurface, d);
+	if(ret == DD_OK && !nextFlip)
+		if(!HookCode(vtb((*lplpDDSurface), 11), (PVOID)myFlip, (PVOID*)&nextFlip, 0)){
+			cleanup();
+			cerr<<"Cannot hook IDirectDrawSurface2::Flip, I suicide.\n";
+		}
+	return ret;
 }
 
 HRESULT WINAPI myDirectDrawCreate(GUID* lpGUID, LPDIRECTDRAW* lplpDD, IUnknown* pUnkOuter){
 	auto ret = nextDirectDrawCreate(lpGUID, lplpDD, pUnkOuter);
-	if(ret == DD_OK && !nextWaitForVerticalBlank){
-		//actual wine implementation is in IDirectDraw7, hook that one only
-		LPDIRECTDRAW7 ddraw7;
-		if((*lplpDD)->QueryInterface(IID_IDirectDraw7, (LPVOID*)&ddraw7) != S_OK){
+	if(ret == DD_OK && !nextCreateSurface){
+		LPDIRECTDRAW2 ddraw2 = 0;
+		try{
+			if((*lplpDD)->QueryInterface(IID_IDirectDraw2, (LPVOID*)&ddraw2) != S_OK) throw "Cannot query IDirectDraw2";
+			if(!HookCode(vtb(ddraw2, 6), (PVOID)myCreateSurface, (PVOID*)&nextCreateSurface, 0)) throw "Cannot hook IDirectDraw2::CreateSurface";
+		} catch(const char* msg){
 			cleanup();
-			cerr<<"Cannot query IDirectDraw7, I suicide.\n";
+			cerr<<msg<<", I suicide.\n";
 		}
-		else{
-			if(!HookCode(vtb(ddraw7, 22), (PVOID)myWaitForVerticalBlank, (PVOID*)&nextWaitForVerticalBlank, 0)){
-				cleanup();
-				cerr<<"Cannot hook WaitForVerticalBlank, I suicide.\n";
-			}
-			ddraw7->Release();
-		}
+		if(ddraw2) ddraw2->Release();
 	}
 	return ret;
 }
